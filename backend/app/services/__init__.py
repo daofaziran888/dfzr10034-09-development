@@ -13,6 +13,7 @@ from app.services.retention_job import RetentionJobService
 from app.services.data_anonym import DataAnonymService
 from app.services.operation_log import OperationLogService
 from app.services.change_capture import ChangeCaptureService
+from app.services.change_delivery import ChangeDeliveryService
 from app.services.lineage_track import LineageTrackService
 from app.services.impact_analysis import ImpactAnalysisService
 from app.services.tag_registry import TagRegistryService
@@ -42,6 +43,7 @@ SERVICES: dict[str, BaseModuleService] = {
     "data_anonym": DataAnonymService(),
     "operation_log": OperationLogService(),
     "change_capture": ChangeCaptureService(),
+    "change_delivery": ChangeDeliveryService(),
     "lineage_track": LineageTrackService(),
     "impact_analysis": ImpactAnalysisService(),
     "tag_registry": TagRegistryService(),

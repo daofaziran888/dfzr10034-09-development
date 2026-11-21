@@ -21,8 +21,9 @@ class Store:
         self._seed()
 
     def _seed(self) -> None:
+        # 深拷贝种子数据：交付文件等记录内嵌条目列表，浅拷贝会在 reset 间共享。
         self._tables: dict[str, list[dict[str, Any]]] = {
-            name: [dict(row) for row in rows] for name, rows in SEED_ROWS.items()
+            name: copy.deepcopy(rows) for name, rows in SEED_ROWS.items()
         }
         self._change_log: list[dict[str, Any]] = []
         self._snapshots: dict[str, list[dict[str, Any]]] = {}

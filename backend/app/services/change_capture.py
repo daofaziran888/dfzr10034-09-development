@@ -70,6 +70,46 @@ class ChangeCaptureService(BaseModuleService):
             "pipeline": "change_capture->diff_report->version_history",
         }
 
+    def capture_field_change(self, asset_code: str, field_name: str, action: str,
+                             before: Any = "", after: Any = "", source: str = "schema_evolution",
+                             effective_time: str | None = None,
+                             source_seq: int | None = None) -> dict[str, Any]:
+        """捕获字段级结构变更（新增列/删除列等），登记生效时间和来源序号。
+
+        来源序号是源端报文的序号：迟到报文的来源序号可能小于已交付变更，
+        变更交付按生效时间归入交割窗口，已签发窗口的迟到变更走补差。
+        """
+        result = self.capture_change(asset_code, action, before, after, source)
+        change = result["change"]
+        change["字段名"] = field_name
+        change["字段动作"] = action
+        change["生效时间"] = effective_time or change["变更时间"]
+        change["来源序号"] = (
+            source_seq if source_seq is not None else self._next_source_seq(asset_code)
+        )
+        change["交付状态"] = "未交付"
+        change["交付文件"] = ""
+        change["交付序号"] = ""
+        # 让自动生成的差异报告带上变更编号，接收方按编号核对补交记录
+        for row in store.rows("diff_report"):
+            if row.get("change_id") == change["id"]:
+                row["变更编号"] = change["记录编号"]
+                row["字段名"] = field_name
+        return result
+
+    def _next_source_seq(self, asset_code: str) -> int:
+        """资产维度递增的来源序号（源端报文未带序号时兜底）。"""
+        seqs: list[int] = []
+        for row in store.rows(self.MODULE):
+            if row.get("目标资产") != asset_code:
+                continue
+            value = row.get("来源序号")
+            if isinstance(value, int):
+                seqs.append(value)
+            elif isinstance(value, str) and value.isdigit():
+                seqs.append(int(value))
+        return max(seqs, default=0) + 1
+
     def _compute_impact_scope(self, asset_code: str, change_type: str) -> str:
         """计算影响范围。"""
         downstream = self._find_downstream_assets(asset_code)
